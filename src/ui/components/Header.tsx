@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ compact }) => {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text color={theme.primary} bold>aman</Text>
-      <Text color={theme.dim}>AI environment manager</Text>
+      <Text color={theme.dim}>Your AI workflows, in one place.</Text>
     </Box>
   );
 };

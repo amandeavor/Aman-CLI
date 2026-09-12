@@ -2,7 +2,7 @@
   "name": "@amandeavor/aman-cli",
   "version": "0.1.0",
   "type": "module",
-  "description": "Package manager for AI workflow assets — skills, prompts, MCPs, packs, and stacks.",
+  "description": "Your AI workflows, in one place. Organize skills, prompts, and MCP configs with read-only diagnostics.",
   "bin": {
     "aman": "./dist/bin/aman.js",
     "aman-cli": "./dist/bin/aman.js"
@@ -10,10 +10,11 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/assets/aman-banner.svg"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "prepack": "npm run build",
@@ -27,7 +28,7 @@
     "search": "tsx src/bin/aman.ts search",
     "doctor": "tsx src/bin/aman.ts doctor",
     "start": "tsx src/bin/aman.ts",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
     "typecheck": "tsc --noEmit",
     "pack:check": "npm pack --dry-run"
   },

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "5b7d0820-f6b1-45c2-b9c2-d9eaf7399a21",
+  "slug": "@demo/review-checklist",
+  "type": "skill",
+  "name": "review-checklist",
+  "version": "1.0.0",
+  "description": "A focused code-review checklist.",
+  "author": "Aman Awasthi",
+  "tags": [
+    "review"
+  ],
+  "visibility": "public",
+  "dependencies": [],
+  "integrity": {
+    "algorithm": "sha256",
+    "checksum": "sha256:7a69385846b4164dfe1a2d62ee4a35cf06e301c906364be52e43660da289bd07",
+    "signature": null
+  }
+}

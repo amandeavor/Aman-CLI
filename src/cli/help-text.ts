@@ -10,10 +10,12 @@ Cache:
   cache clear         Clear marketplace discovery cache`
     : `  cache <cmd>         Discovery cache (coming in a future release)`;
 
-  console.log(`aman ${CLI_VERSION} — package manager for AI workflow assets
+  console.log(`Aman CLI ${CLI_VERSION} — Your AI workflows, in one place.
 
-Install globally (one command):
-  npx aman-cli
+Start here:
+  aman init --local        Set up local storage; no account needed
+  aman init --project      Set up .aman in the current project
+  aman doctor --project    Inspect project health without changing files
 
 Usage:
   aman <command> [options]
@@ -36,7 +38,7 @@ Commands:
   stack <cmd>         Manage workflow stacks
   sync <push|pull>    Sync environment with GitHub
   backup <cmd>        Save, list, restore, or delete backups
-  doctor              Check environment health
+  doctor              Read-only health checks with actionable next steps
   config <cmd>        Manage CLI settings
   registry <cmd>      Publish and query the canonical asset registry
   ${cacheSection}
@@ -53,7 +55,14 @@ Options:
   --global, -g        Target global scope (~/.aman)
   --project, -p       Target project scope (.aman/)
   --type              Asset type: skill, prompt, or mcp
+  --json              Machine-readable diagnostics (doctor) or browse output
   --version, -v       Print CLI version
+
+Doctor:
+  aman doctor                 Check your active global environment
+  aman doctor --project       Check this project's .aman directory
+  aman doctor --project --json Emit a JSON report for scripts
+  Exit codes: 0 = no failures (warnings allowed), 1 = failures
 
 Environment:
   AMAN_REGISTRY_BACKEND   Registry adapter: local (default) or github

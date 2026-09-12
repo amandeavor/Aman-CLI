@@ -4,6 +4,7 @@ import path from 'path';
 import { GLOBAL_CONFIG_DIR, GLOBAL_DIR, LOCAL_DIR } from '../config/paths.js';
 import { configService } from './config.service.js';
 import { copyDir, ensureDir, exists, writeJson } from '../storage/filesystem.js';
+import { ensureMcpLocalGitignore } from '../utils/mcp-local.js';
 
 export type StorageMode = 'local' | 'github';
 
@@ -102,6 +103,7 @@ export class EnvironmentService {
     for (const dir of ENVIRONMENT_DIRS) {
       await ensureDir(path.join(baseDir, dir));
     }
+    await ensureMcpLocalGitignore(baseDir);
 
     const manifestPath = path.join(baseDir, 'aman.json');
     if (!exists(manifestPath)) {

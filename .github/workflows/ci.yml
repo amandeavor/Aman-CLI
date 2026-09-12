@@ -10,8 +10,13 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -19,7 +24,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Install dependencies
@@ -31,8 +36,15 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build package
-        run: npm run build
-
       - name: Verify package contents
         run: npm run pack:check
+
+  verify:
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every platform check to pass
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: test "$RESULT" = success

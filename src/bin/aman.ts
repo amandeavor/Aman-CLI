@@ -2,7 +2,6 @@
 import meow from 'meow';
 import { CLI_VERSION } from '../cli/version.js';
 import { printHelpText } from '../cli/help-text.js';
-import { isAmanCliEntrypoint, runGlobalInstall } from '../cli/global-install.js';
 import { ensureGlobalDirs } from '../config/paths.js';
 import { dashboardCommand } from '../commands/dashboard.js';
 import { browseCommand } from '../commands/browse.js';
@@ -25,18 +24,12 @@ import { registryCommand } from '../commands/registry.js';
 import { cacheCommand } from '../commands/cache.js';
 
 const preArgs = process.argv.slice(2);
-if (preArgs.includes('--version') || preArgs.includes('-v') || preArgs[0] === 'version') {
+if (preArgs.length === 1 && ['--version', '-v', 'version'].includes(preArgs[0])) {
   console.log(CLI_VERSION);
   process.exit(0);
 }
-if (preArgs.length === 1 && (preArgs[0] === '--help' || preArgs[0] === '-h')) {
+if (preArgs.includes('--help') || preArgs.includes('-h')) {
   printHelpText();
-  process.exit(0);
-}
-
-// `npx aman-cli` (no subcommand) → global install; use `aman` afterward.
-if (isAmanCliEntrypoint() && preArgs.length === 0) {
-  runGlobalInstall();
   process.exit(0);
 }
 
@@ -61,6 +54,7 @@ const cli = meow(
 `,
   {
     importMeta: import.meta,
+    autoVersion: false,
     flags: {
       global: { type: 'boolean', shortFlag: 'g' },
       project: { type: 'boolean', shortFlag: 'p' },
@@ -75,7 +69,7 @@ const cli = meow(
       path: { type: 'string' },
       format: { type: 'string' },
       all: { type: 'boolean' },
-      version: { type: 'boolean', shortFlag: 'v' },
+      version: { type: 'string', shortFlag: 'v' },
       yes: { type: 'boolean', shortFlag: 'y' },
       noTty: { type: 'boolean' },
       from: { type: 'string' },
@@ -85,21 +79,21 @@ const cli = meow(
 );
 
 async function main() {
-  await ensureGlobalDirs().catch(() => {});
-
-  if (cli.flags.version) {
-    console.log(CLI_VERSION);
-    return;
-  }
-
   const input = cli.input;
   const cmd = input[0];
   const args = input.slice(1);
   const options = cli.flags;
 
+  if (options.global && options.project) {
+    throw new Error('Choose --global or --project, not both.');
+  }
+  // Inspection must not create an environment as a side effect.
+  if (cmd && !['doctor', 'help'].includes(cmd)) await ensureGlobalDirs();
+
   switch (cmd) {
     case undefined:
-      await dashboardCommand();
+      if (!process.stdin.isTTY || !process.stdout.isTTY) printHelpText();
+      else await dashboardCommand();
       break;
     case 'init':
       await initCommand(args, options);
@@ -138,7 +132,7 @@ async function main() {
       await backupCommand(args, options);
       break;
     case 'doctor':
-      await doctorCommand();
+      await doctorCommand(options);
       break;
     case 'config':
       await configCommand(args);
@@ -150,7 +144,7 @@ async function main() {
       await infoCommand(args);
       break;
     case 'registry':
-      await registryCommand(args, options);
+      await registryCommand(preArgs.slice(1), options);
       break;
     case 'help':
       await helpCommand();
