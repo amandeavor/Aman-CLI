@@ -1,16 +1,28 @@
-import { BUNDLED_SKILLS, BUNDLED_PROMPTS, BUNDLED_MCPS, LOCAL_DIR } from '../config/paths.js';
+import { BUNDLED_SKILLS, BUNDLED_PROMPTS, BUNDLED_MCPS, LOCAL_DIR, GLOBAL_CONFIG_FILE } from '../config/paths.js';
 import { exists } from '../storage/filesystem.js';
 import { HealthCheck } from '../types/index.js';
 import { execSync } from 'child_process';
-import { lockService } from './lock.service.js';
+import { inspectLockfile } from '../utils/inspect-lockfile.js';
 import { environmentService } from './environment.service.js';
 import path from 'path';
-import { migrateScopeLayout, findLayoutViolations, assetDir, metadataFilePath, mcpLocalFilePath } from '../storage/asset-layout.js';
+import { findLayoutViolations, assetDir, metadataFilePath, mcpLocalFilePath, contentFilePath } from '../storage/asset-layout.js';
+import { promises as fs } from 'node:fs';
 import { countEmptyMcpLocalValues, gitignoreIncludesMcpLocalAsync } from '../utils/mcp-local.js';
 
 export class DoctorService {
   async runChecks(scope: 'global' | 'project' = 'global'): Promise<HealthCheck[]> {
     const checks: HealthCheck[] = [];
+
+    if (exists(GLOBAL_CONFIG_FILE)) {
+      try {
+        const config = JSON.parse(await fs.readFile(GLOBAL_CONFIG_FILE, 'utf8'));
+        if (!config || typeof config !== 'object' || Array.isArray(config) ||
+          (config.environmentPath !== undefined && typeof config.environmentPath !== 'string')) throw new Error();
+      } catch {
+        checks.push({ name: 'CLI configuration', status: 'fail', message: 'CLI configuration is unreadable or invalid.', fix: 'Back up and repair ~/.aman/config/aman.json. The original file was left unchanged.' });
+        return checks;
+      }
+    }
 
     const targetDir = scope === 'global' ? environmentService.getActiveEnvironmentDir() : LOCAL_DIR;
     const dirExists = exists(targetDir);
@@ -18,7 +30,7 @@ export class DoctorService {
       name: `${scope} directory exists`,
       status: dirExists ? 'pass' : 'fail',
       message: dirExists ? `Found ${targetDir}` : `Missing ${targetDir}`,
-      fix: dirExists ? undefined : `Run 'aman init' to create the environment.`,
+      fix: dirExists ? undefined : `Run 'aman init ${scope === 'project' ? '--project' : '--local'}' to create the environment.`,
     });
 
     const bundledSkills = exists(BUNDLED_SKILLS);
@@ -38,7 +50,7 @@ export class DoctorService {
 
     let gitAvailable = false;
     try {
-      execSync('git --version', { stdio: 'ignore' });
+      execSync('git --version', { stdio: 'ignore', timeout: 5000 });
       gitAvailable = true;
     } catch {
       // Ignore
@@ -51,7 +63,7 @@ export class DoctorService {
 
     let ghAvailable = false;
     try {
-      execSync('gh --version', { stdio: 'ignore' });
+      execSync('gh --version', { stdio: 'ignore', timeout: 5000 });
       ghAvailable = true;
     } catch {
       // Ignore
@@ -63,10 +75,10 @@ export class DoctorService {
       fix: ghAvailable ? undefined : `Install using winget/brew/apt or scoop`,
     });
 
-    if (ghAvailable) {
+    if (ghAvailable && scope === 'global' && environmentService.getStorage().type === 'github') {
       let ghAuth = false;
       try {
-        execSync('gh auth status', { stdio: 'ignore' });
+        execSync('gh auth status', { stdio: 'ignore', timeout: 10000 });
         ghAuth = true;
       } catch {
         // Ignore
@@ -80,37 +92,36 @@ export class DoctorService {
     }
 
     const nodeVersion = process.version;
-    const isV18 = parseInt(nodeVersion.slice(1).split('.')[0], 10) >= 18;
+    const isV18 = parseInt(nodeVersion.slice(1).split('.')[0], 10) >= 22;
     checks.push({
       name: `Node.js version`,
       status: isV18 ? 'pass' : 'fail',
       message: `Running ${nodeVersion}`,
-      fix: isV18 ? undefined : `Upgrade Node.js to v18 or newer.`,
+      fix: isV18 ? undefined : `Upgrade Node.js to v22 or newer.`,
     });
 
     if (dirExists) {
-      await migrateScopeLayout(targetDir);
-
+      let inspected;
       try {
-        await lockService.read(scope);
+        inspected = await inspectLockfile(path.join(targetDir, 'aman.lock'), scope);
         checks.push({
           name: `Lockfile valid`,
-          status: 'pass',
-          message: `Lockfile parsed successfully`,
+          status: inspected?.legacy ? 'warn' : 'pass',
+          message: !inspected ? 'No lockfile yet — created when you install or import assets.' : inspected.legacy ? 'Legacy lockfile detected; left unchanged.' : 'Lockfile structure parsed successfully',
         });
-      } catch {
+      } catch (error) {
         checks.push({
           name: `Lockfile valid`,
           status: 'fail',
-          message: `Could not parse aman.lock`,
-          fix: `Remove and reinstall assets.`,
+          message: error instanceof Error ? error.message : 'Could not inspect aman.lock.',
+          fix: 'Back up aman.lock before repairing it. No files were changed.',
         });
       }
 
       try {
-        const lock = await lockService.read(scope);
+        const lock = inspected?.lock;
         let missingCount = 0;
-        const allEntries = lock.assets;
+        const allEntries = lock?.assets ?? [];
 
         for (const entry of allEntries) {
           const typeRoot =
@@ -120,8 +131,14 @@ export class DoctorService {
                 ? path.join(targetDir, 'prompts')
                 : path.join(targetDir, 'mcps');
           const metaPath = metadataFilePath(assetDir(entry.type, typeRoot, entry.localName));
-          if (!exists(metaPath)) {
+          const contentPath = contentFilePath(assetDir(entry.type, typeRoot, entry.localName), entry.type);
+          if (!exists(metaPath) || !exists(contentPath)) {
             missingCount++;
+          } else {
+            try {
+              const metadata = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+              if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) missingCount++;
+            } catch { missingCount++; }
           }
         }
 
@@ -130,8 +147,8 @@ export class DoctorService {
           status: missingCount === 0 ? 'pass' : 'warn',
           message:
             missingCount === 0
-              ? `All assets have valid metadata`
-              : `Found ${missingCount} assets with missing metadata`,
+              ? `Checked ${allEntries.length} locked asset(s) for content files and readable metadata`
+              : `Found ${missingCount} assets with missing content or unreadable metadata`,
           fix: missingCount === 0 ? undefined : `Re-install missing assets to regenerate metadata.`,
         });
 
@@ -151,6 +168,7 @@ export class DoctorService {
 
         let mcpLocalMissing = 0;
         let mcpEmptyValues = 0;
+        let mcpInvalid = 0;
         for (const entry of allEntries) {
           if (entry.type !== 'mcp' || !entry.requiresLocalConfig) continue;
           const mcpDir = assetDir('mcp', path.join(targetDir, 'mcps'), entry.localName);
@@ -158,9 +176,15 @@ export class DoctorService {
           if (!exists(localSecrets)) {
             mcpLocalMissing++;
           } else {
-            mcpEmptyValues += await countEmptyMcpLocalValues(mcpDir);
+            try {
+              const values = JSON.parse(await fs.readFile(localSecrets, 'utf8'));
+              if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error();
+              mcpEmptyValues += await countEmptyMcpLocalValues(mcpDir);
+            } catch { mcpInvalid++; }
           }
         }
+
+        if (mcpInvalid) checks.push({ name: 'MCP local JSON', status: 'fail', message: `${mcpInvalid} local configuration file(s) contain invalid JSON.`, fix: 'Repair mcp.local.json syntax. Secret values are never printed by doctor.' });
 
         checks.push({
           name: `MCP local configuration`,
@@ -194,7 +218,7 @@ export class DoctorService {
           fix: gitignoreOk ? undefined : `Add "mcps/**/mcp.local.json" to .gitignore at the scope root.`,
         });
       } catch {
-        // Ignore
+        checks.push({ name: 'Asset inspection', status: 'fail', message: 'Could not inspect all asset files.', fix: 'Check environment file permissions and JSON syntax, then run doctor again.' });
       }
     }
 

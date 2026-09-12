@@ -66,25 +66,23 @@ export const DoctorApp = ({ onBack }: { onBack?: () => void }) => {
   );
 };
 
-export async function doctorCommand() {
-  if (!process.stdin.isTTY) {
-    const checks = await doctorService.runChecks('global');
-    console.log('\n  Aman Diagnostics (Non-TTY Fallback):\n');
-    let allPassed = true;
+export async function doctorCommand(options: { project?: boolean; json?: boolean } = {}) {
+  const scope = options.project ? 'project' : 'global';
+  const checks = await doctorService.runChecks(scope);
+  const summary = {
+    passed: checks.filter(check => check.status === 'pass').length,
+    warnings: checks.filter(check => check.status === 'warn').length,
+    failed: checks.filter(check => check.status === 'fail').length,
+  };
+  if (options.json) {
+    console.log(JSON.stringify({ scope, summary, checks }, null, 2));
+  } else {
+    console.log(`\nAman CLI · ${scope} environment\nRead-only diagnostics\n`);
     for (const check of checks) {
-      const statusSymbol = check.status === 'pass' ? '✓' : check.status === 'warn' ? '⚠' : '✗';
-      console.log(`  ${statusSymbol} ${check.name}: ${check.message}`);
-      if (check.status === 'fail') {
-        allPassed = false;
-      }
+      console.log(`[${check.status.toUpperCase()}] ${check.name}: ${check.message}`);
+      if (check.fix) console.log(`  Next: ${check.fix}`);
     }
-    console.log('');
-    if (!allPassed) {
-      process.exit(1);
-    }
-    return;
+    console.log(`\n${summary.passed} passed · ${summary.warnings} warnings · ${summary.failed} failed`);
   }
-
-  const { waitUntilExit } = render(<DoctorApp />);
-  await waitUntilExit();
+  process.exitCode = summary.failed > 0 ? 1 : 0;
 }

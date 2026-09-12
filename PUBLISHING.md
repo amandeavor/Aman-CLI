@@ -1,59 +1,30 @@
-# Publishing `aman-cli` to npm
+# Publishing Aman CLI
 
-Repo-only doc (not included in the npm tarball).
+The package identity is **`@amandeavor/aman-cli`**. Both `aman` and `aman-cli` are command aliases for the same entry point. Neither alias installs another package when opened.
 
-## Prerequisites
+Public installation documentation currently uses source builds. Do not advertise registry installation until the scoped package and intended version have actually been published and tested.
 
-- npm account with access to publish `aman-cli`
-- `npm login`
-- `npm run typecheck` and `npm run build` pass
+## Verify a release
 
-## What gets published
-
-Only these paths (see `package.json` → `files`):
-
-- `dist/` — compiled CLI
-- `skills/`, `prompts/`, `mcps/` — bundled assets
-- `README.md`, `LICENSE`
-
-Specs, QA reports, and contributor docs stay on GitHub.
-
-## Dry run
-
-```bash
+```sh
+npm ci
+npm run typecheck
+npm test
 npm run pack:check
-# or: npm pack --dry-run
 ```
 
-Last check (v0.1.0): **552 files**, ~**666 KB** packed / **2.4 MB** unpacked. Most size is bundled `skills/` (starter content), not docs or QA artifacts.
+Tests build the CLI and exercise isolated setup, diagnostics, and local registry workflows. CI runs on Linux, Windows, and macOS with Node.js 22 and 24.
 
-Inspect the file list before publishing — you should **not** see `BRUTAL_QA_REPORT.md`, `AMAN-*-SPEC-V1.md`, or `src/`.
+Review package contents, release notes, and the version before publishing. The package should contain compiled code, the README, its banner, and the license; it must not contain local environments or credentials.
 
-## Test like a user
+## Maintainer publication
 
-```bash
-npm pack
-mkdir ../test-install && cd ../test-install
-npm install ../aman-intelligence/aman-cli-0.1.0.tgz
-npx aman-cli
-npx aman-cli doctor
-```
+After release review and with the correct npm account authenticated:
 
-`npx aman-cli` with no args installs globally (`npm install -g aman-cli@<version>`).
-
-## Publish
-
-```bash
+```sh
 npm publish --access public
 ```
 
-First early-adopter release uses **0.1.x** semver. Promote to `1.0.0` after real-world usage.
+This is an explicit maintainer action. Repository changes and tagged GitHub releases do not automatically publish to npm.
 
-## User install paths
-
-| Command | Result |
-|---------|--------|
-| `npx aman-cli` | Global install + next-step hints |
-| `npx aman-cli doctor` | Run CLI once without global install |
-| `npm install -g aman-cli` | Global `aman` / `aman-cli` binaries |
-| `aman` | Dashboard (TTY) or status (non-TTY) |
+After publication, test the exact scoped version in a clean directory before documenting an `npm install --global @amandeavor/aman-cli@VERSION` command. Never substitute the unrelated unscoped name.

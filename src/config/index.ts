@@ -16,54 +16,38 @@ const defaultConfig: AmanConfig = {
 class ConfigManager {
   private globalConf!: Conf<AmanConfig>;
 
-  constructor() {
-    try {
+  private writable(): Conf<AmanConfig> {
+    if (!this.globalConf) {
       this.globalConf = new Conf<AmanConfig>({
-        projectName: 'aman',
-        cwd: GLOBAL_CONFIG_DIR,
-        configName: 'aman',
-        defaults: defaultConfig,
-      });
-    } catch (err) {
-      const configPath = path.join(GLOBAL_CONFIG_DIR, 'aman.json');
-      if (fs.existsSync(configPath)) {
-        const timestamp = new Date().toISOString().slice(0, 10);
-        const backupPath = path.join(GLOBAL_CONFIG_DIR, `aman.json.corrupted-${timestamp}`);
-        try {
-          fs.renameSync(configPath, backupPath);
-        } catch {
-          // Ignore
-        }
-      }
-      
-      console.error('\n  \x1b[31;1mConfiguration file was corrupted.\x1b[0m');
-      console.error('  \x1b[33mA backup was created.\x1b[0m');
-      console.error('  \x1b[32mDefaults have been restored.\x1b[0m\n');
-
-      this.globalConf = new Conf<AmanConfig>({
-        projectName: 'aman',
-        cwd: GLOBAL_CONFIG_DIR,
-        configName: 'aman',
-        defaults: defaultConfig,
+        projectName: 'aman', cwd: GLOBAL_CONFIG_DIR,
+        configName: 'aman', defaults: defaultConfig,
       });
     }
+    return this.globalConf;
   }
 
   load(): AmanConfig {
-    return this.globalConf.store;
+    // Reading help, theme, or diagnostics must never create or quarantine files.
+    const file = path.join(GLOBAL_CONFIG_DIR, 'aman.json');
+    if (!fs.existsSync(file)) return { ...defaultConfig };
+    try {
+      const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return { ...defaultConfig };
+      return { ...defaultConfig, ...value };
+    } catch { return { ...defaultConfig }; }
   }
 
   get<K extends keyof AmanConfig>(key: K): AmanConfig[K] {
-    return this.globalConf.get(key) as AmanConfig[K];
+    return this.load()[key];
   }
 
   set<K extends keyof AmanConfig>(key: K, value: AmanConfig[K]): void {
-    this.globalConf.set(key, value);
+    this.writable().set(key, value);
   }
 
   reset(): void {
-    this.globalConf.clear();
-    this.globalConf.store = defaultConfig;
+    this.writable().clear();
+    this.writable().store = defaultConfig;
   }
 
   getTheme(): 'dark' | 'light' {
@@ -84,7 +68,7 @@ class ConfigManager {
   }
 
   onDidChange<K extends keyof AmanConfig>(key: K, callback: (value?: AmanConfig[K]) => void): () => void {
-    return this.globalConf.onDidChange(key, callback);
+    return this.writable().onDidChange(key, callback);
   }
 }
 

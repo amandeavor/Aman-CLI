@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480" role="img" aria-labelledby="title desc">
+  <title id="title">Aman CLI — Your AI workflows, in one place.</title>
+  <desc id="desc">Amber terminal mark on charcoal with a project setup and diagnostic command example.</desc>
+  <rect width="1280" height="480" rx="20" fill="#171A18"/>
+  <path d="M56 58h60v60H56z" fill="#F6B44D"/>
+  <path d="m72 76 10 12-10 12m17 0h12" fill="none" stroke="#171A18" stroke-width="4"/>
+  <text x="134" y="98" fill="#F2F3ED" font-family="Arial, sans-serif" font-size="36" font-weight="700">aman</text>
+  <text x="242" y="98" fill="#A6ADA4" font-family="monospace" font-size="19">CLI</text>
+  <text x="56" y="215" fill="#F2F3ED" font-family="Arial, sans-serif" font-size="57" font-weight="700">Your AI workflows,</text>
+  <text x="56" y="286" fill="#F6B44D" font-family="Arial, sans-serif" font-size="57" font-weight="700">in one place.</text>
+  <text x="58" y="345" fill="#BAC0B6" font-family="Arial, sans-serif" font-size="22">Organize. Reuse. Diagnose.</text>
+  <path d="M56 406h1168" stroke="#343C35"/>
+  <text x="56" y="446" fill="#A6ADA4" font-family="monospace" font-size="16">SKILLS / PROMPTS / MCP CONFIGS</text>
+  <rect x="735" y="140" width="490" height="213" rx="12" fill="#212722" stroke="#414B41"/>
+  <circle cx="759" cy="166" r="4" fill="#F6B44D"/>
+  <text x="777" y="172" fill="#A6ADA4" font-family="monospace" font-size="15">YOUR TERMINAL</text>
+  <text x="759" y="219" fill="#F2F3ED" font-family="monospace" font-size="19">$ aman init --project</text>
+  <text x="759" y="257" fill="#F2F3ED" font-family="monospace" font-size="19">$ aman doctor --project</text>
+  <text x="759" y="314" fill="#B7D4AC" font-family="monospace" font-size="17">Read-only. Actionable. Yours.</text>
+  <text x="1224" y="446" text-anchor="end" fill="#A6ADA4" font-family="monospace" font-size="16">OPEN SOURCE · MIT</text>
+</svg>

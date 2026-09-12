@@ -1,4 +1,4 @@
-# Contributing to Aman Intelligence
+# Contributing to Aman CLI
 
 Thank you for helping make Aman trustworthy for real users.
 
@@ -18,9 +18,9 @@ Thank you for helping make Aman trustworthy for real users.
 ## Code contributions
 
 ```bash
-git clone https://github.com/aman-intelligence/aman-cli.git
-cd aman-cli
-npm install
+git clone https://github.com/amandeavor/Aman-CLI.git
+cd Aman-CLI
+npm ci
 npm run typecheck
 npm run build
 npm link

@@ -23,8 +23,8 @@ export interface InitFlowProps {
 }
 
 const storageItems = [
-  { label: 'GitHub (recommended)', value: 'github' },
-  { label: 'Local only', value: 'local' },
+  { label: 'Local — start without an account', value: 'local' },
+  { label: 'GitHub — sync across machines', value: 'github' },
 ];
 
 const githubModeItems = [
@@ -53,7 +53,7 @@ export const InitFlow: React.FC<InitFlowProps> = ({
   };
 
   useInput((input, key) => {
-    if (input === 'q') {
+    if (input === 'q' && screen !== 'repo') {
       finish({ action: 'exit' });
       return;
     }
@@ -166,9 +166,7 @@ async function completeLocalInit(storagePath?: string): Promise<void> {
 
 async function completeGithubInit(repository: string, mode: GithubMode): Promise<void> {
   if (!environmentService.isGithubCliAvailable()) {
-    console.log('  ◌ Installing GitHub CLI...');
-    environmentService.installGithubCli();
-    console.log('  ✓ GitHub CLI ready.');
+    throw new Error('GitHub storage needs GitHub CLI. Install it from https://cli.github.com and run gh auth login, or start with aman init --local.');
   }
 
   console.log(`  ◌ Setting up GitHub environment: ${repository}`);
@@ -197,7 +195,16 @@ export async function initCommand(args: string[], options: any): Promise<void> {
   const wantsLocal = Boolean(options.local);
 
   if (wantsGithub && wantsLocal) {
-    console.log('  Choose either --github or --local, not both.');
+    throw new Error('Choose either --github or --local, not both.');
+  }
+
+  if (options.project) {
+    if (wantsGithub || options.path || args[0]) {
+      throw new Error('--project creates .aman in the current directory. Omit --github, --path, and positional paths.');
+    }
+    const projectDir = await environmentService.ensureProjectEnvironment();
+    console.log(`  Environment ready: ${projectDir}`);
+    console.log('  Next: aman doctor --project');
     return;
   }
 
@@ -215,6 +222,13 @@ export async function initCommand(args: string[], options: any): Promise<void> {
   if (wantsGithub) {
     const repository = options.repo || options.repository || args[0];
     const mode: GithubMode = options.existing ? 'existing' : 'create';
+    if (repository) {
+      await completeGithubInit(repository, mode);
+      return;
+    }
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      throw new Error('Specify --repo owner/name for GitHub setup without an interactive terminal.');
+    }
     const result = await renderInitFlow({ startWithGithub: true, repository, githubMode: mode });
     await completeInitResult(result, options);
     return;
