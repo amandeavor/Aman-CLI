@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Your AI workflows, in one place. Organize skills, prompts, and MCP configs with read-only diagnostics.",
   "bin": {
-    "aman": "./dist/bin/aman.js",
-    "aman-cli": "./dist/bin/aman.js"
+    "aman": "dist/bin/aman.js",
+    "aman-cli": "dist/bin/aman.js"
   },
   "files": [
     "dist",
