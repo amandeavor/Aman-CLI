@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Your AI workflows, in one place. Organize skills, prompts, and MCP configs with read-only diagnostics.",
   "bin": {
-    "aman": "./dist/bin/aman.js",
-    "aman-cli": "./dist/bin/aman.js"
+    "aman": "dist/bin/aman.js",
+    "aman-cli": "dist/bin/aman.js"
   },
   "files": [
     "dist",
@@ -59,12 +59,12 @@
   "author": "Aman Intelligence",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/amandeavor/aman-cli.git"
+    "url": "git+https://github.com/amandeavor/Aman-CLI.git"
   },
   "bugs": {
-    "url": "https://github.com/amandeavor/aman-cli/issues"
+    "url": "https://github.com/amandeavor/Aman-CLI/issues"
   },
-  "homepage": "https://github.com/amandeavor/aman-cli#readme",
+  "homepage": "https://github.com/amandeavor/Aman-CLI#readme",
   "publishConfig": {
     "access": "public"
   },

@@ -26,7 +26,7 @@ When useful instructions live in scattered folders, copying them into the next p
 | Separate project assets from personal defaults | Choose `--project` or `--global` explicitly |
 | Move your collection between machines | Use optional GitHub storage and explicit push/pull commands |
 
-**Early release.** Install from source below. Aman manages asset files; it does not automatically activate them in every editor, start MCP servers, or replace an AI coding tool. Review imported instructions before using them. No AI subscription or API key is required for the local quickstart.
+**Early release.** Install from source below. Once published, the intended global install is `npm install --global @amandeavor/aman-cli` (not live on npm yet — do not treat that command as available today). Aman manages asset files; it does not automatically activate them in every editor, start MCP servers, or replace an AI coding tool. Review imported instructions before using them. No AI subscription or API key is required for the local quickstart.
 
 ## Try it locally
 
