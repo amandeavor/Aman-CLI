@@ -687,6 +687,98 @@ export const antigravityAdapter: ImportAdapter = {
   },
 };
 
+export const zedAdapter: ImportAdapter = {
+  id: 'zed',
+  label: 'Zed',
+  description: 'Prompt templates and rules from Zed editor workflows',
+
+  isAvailable() {
+    const home = os.homedir();
+    const cwd = process.cwd();
+    const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+    return (
+      exists(path.join(cwd, '.zed', 'prompts')) ||
+      exists(path.join(cwd, '.zed', 'rules')) ||
+      exists(path.join(cwd, '.rules')) ||
+      exists(path.join(home, '.config', 'zed', 'prompts')) ||
+      exists(path.join(home, '.config', 'zed', 'prompt_overrides')) ||
+      exists(path.join(home, 'Library', 'Application Support', 'Zed', 'prompts')) ||
+      exists(path.join(appData, 'Zed', 'prompts'))
+    );
+  },
+
+  unavailableReason() {
+    return 'No Zed prompt configuration found (~/.config/zed/prompts or project .zed/prompts)';
+  },
+
+  async scan(options) {
+    const home = os.homedir();
+    const cwd = options?.rootPath ? path.resolve(expandHome(options.rootPath)) : process.cwd();
+    const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+    const found: DiscoveredImportAsset[] = [];
+    const seen = new Set<string>();
+
+    const promptDirs = options?.rootPath
+      ? [
+          path.join(cwd, '.zed', 'prompts'),
+          path.join(cwd, 'prompts'),
+          cwd,
+        ]
+      : [
+          path.join(cwd, '.zed', 'prompts'),
+          path.join(home, '.config', 'zed', 'prompts'),
+          path.join(home, '.config', 'zed', 'prompt_overrides'),
+          path.join(home, 'Library', 'Application Support', 'Zed', 'prompts'),
+          path.join(appData, 'Zed', 'prompts'),
+        ];
+
+    for (const dir of promptDirs) {
+      if (!exists(dir)) continue;
+      let entries: string[] = [];
+      try {
+        entries = await fs.readdir(dir);
+      } catch {
+        continue;
+      }
+      for (const file of entries) {
+        if (!file.endsWith('.md') && !file.endsWith('.hbs')) continue;
+        const filePath = path.join(dir, file);
+        const key = `prompt:${filePath}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const baseName = file.replace(/\.(md|hbs)$/, '');
+        const label = dir.startsWith(home)
+          ? `${dir.replace(home, '~')}/${file}`
+          : path.relative(cwd, filePath) || file;
+        found.push(await discoverPromptFile(filePath, 'zed', label, baseName));
+      }
+    }
+
+    const ruleFiles = [
+      path.join(cwd, '.zed', 'rules'),
+      path.join(cwd, '.rules'),
+    ];
+    for (const ruleFile of ruleFiles) {
+      if (!exists(ruleFile)) continue;
+      try {
+        const stat = await fs.stat(ruleFile);
+        if (!stat.isFile()) continue;
+        const key = `prompt:${ruleFile}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const rel = path.relative(cwd, ruleFile) || path.basename(ruleFile);
+        found.push(
+          await discoverPromptFile(ruleFile, 'zed', rel, 'zed-project-rules')
+        );
+      } catch {
+        // Ignore stat/read errors
+      }
+    }
+
+    return found;
+  },
+};
+
 export const IMPORT_ADAPTERS: ImportAdapter[] = [
   claudeCodeAdapter,
   cursorAdapter,
@@ -699,6 +791,7 @@ export const IMPORT_ADAPTERS: ImportAdapter[] = [
   customPathAdapter,
   amanEnvironmentAdapter,
   antigravityAdapter,
+  zedAdapter,
 ];
 
 export function getAdapter(id: ImportSourceId): ImportAdapter | undefined {
