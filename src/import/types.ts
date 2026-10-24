@@ -11,7 +11,8 @@ export type ImportSourceId =
   | 'local-folder'
   | 'custom-path'
   | 'aman-environment'
-  | 'antigravity';
+  | 'antigravity'
+  | 'zed';
 
 export type ImportCanonicalStatus = 'canonical' | 'convertible' | 'ambiguous' | 'unknown';
 
